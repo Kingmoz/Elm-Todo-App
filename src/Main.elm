@@ -5,7 +5,8 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput, onClick, on, keyCode)
 import Json.Decode as JD
-
+import Svg as S
+import Svg.Attributes as SA
 
 
 -- MAIN
@@ -143,10 +144,19 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ div []
+    div [ class "app" ]
+        [ div [ class "mdc-card" ]
             [ div
-                [] [ viewInput "text" "Add a new todo" model.newTodoContent UpdateNewTodo Add ]
+                [ class "card__header" ]
+                [ div
+                    [ class "card__header__inner" ]
+                    [ span
+                        [ class "card__header__title" ]
+                        [ text "Todo List" ]
+                    ]
+                ]  
+            , div
+                [ class "new-todo" ] [ viewInput "text" "Add a new todo" model.newTodoContent UpdateNewTodo Add ]
                 , viewErrorMessage model.errorVisibility
                 , viewTodoItems model.items
             ]
@@ -155,7 +165,8 @@ view model =
 
 viewInput : String -> String -> String -> (String -> Msg) -> Msg -> Html Msg
 viewInput t p v inputMsg enterMsg =
-    input [ type_ t
+    input [ class "mdc-text-field__input"
+          , type_ t
           , placeholder p
           , value v
           , autofocus True
@@ -178,33 +189,56 @@ onEnter msg =
 
 viewTodoItems : List TodoItem -> Html Msg
 viewTodoItems todoitems =
-    ul []
+    ul [ class "mdc-list list" ]
         (List.map viewTodoItem todoitems)
 
 
 viewTodoItem : TodoItem -> Html Msg
 viewTodoItem todo =
-    li []
+    li [ class "mdc-list-item list__item" ]
         [ viewCompleteCheckBox todo
-        , textarea [] [ text todo.content ]
+        , div
+            [ class "mdc-list-item__text list__item__input" ]
+            [ textarea 
+                [ class "list__item__input__text-area", classList [ ( "completed", todo.completed ) ], rows 1 ]
+                [ text todo.content ]
+            ]
         , viewDeleteButton todo.id
         ]
 
 
+-- From: https://material.io/develop/web/components/input-controls/checkboxes/
 viewCompleteCheckBox : TodoItem -> Html Msg
 viewCompleteCheckBox todo =
-    div []
+    div [ class "mdc-checkbox list__item__complete" ]
         [ input
-            [ type_ "checkbox"
-            , checked todo.completed
-            , onClick (Complete todo.id (not todo.completed))
-            ] []
+          [ class "mdc-checkbox__native-control"
+          , type_ "checkbox"
+          , checked todo.completed
+          , onClick (Complete todo.id (not todo.completed))
+          ] []
+        , div [ class "mdc-checkbox__background" ]
+            [
+              S.svg [ SA.class "mdc-checkbox__checkmark", SA.viewBox "0 0 24 24" ]
+                [
+                  S.path
+                    [ SA.class "mdc-checkbox__checkmark-path"
+                    , SA.fill "none"
+                    , SA.d "M1.73,12.91 8.1,19.28 22.79,4.59"
+                    ] []
+                ]
+            ]
+        , div [ class "mdc-checkbox__mixedmark" ] []
         ]
 
 
 viewDeleteButton : Int -> Html Msg
 viewDeleteButton id =
-    button [ onClick (Delete id) ] [ text "close" ]
+    button
+        [ class "mdc-icon-button material-icons list__item__delete-btn"
+        , onClick (Delete id)
+        ]
+        [ text "close" ]
 
 
 viewErrorMessage : Bool -> Html Msg
