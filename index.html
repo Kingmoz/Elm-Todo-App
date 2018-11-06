@@ -5,8 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ELM Todo List</title>
     <link rel="shortcut icon" type="image/x-icon" href="favicon.ico"/>
+    <script type="text/javascript" src="elm.js"></script>
   </head>
   <body>
     <div id="root"></div>
   </body>
+  <script type="text/javascript">
+    var storageKey = "todo-items";
+    var storedState = localStorage.getItem(storageKey);
+    var startingState = storedState ? JSON.parse(storedState) : null;
+    var app = Elm.Main.init({
+      node: document.getElementById('root'),
+      flags: startingState
+    });
+    app.ports.setStorage.subscribe(function(state) {
+      localStorage.setItem(storageKey, JSON.stringify(state));
+    });
+  </script>
 </html>

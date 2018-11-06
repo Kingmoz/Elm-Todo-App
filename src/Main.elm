@@ -1,3 +1,5 @@
+port module Main exposing (..)
+
 import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -10,7 +12,33 @@ import Json.Decode as JD
 
 
 main =
-  Browser.sandbox { init = init, update = update, view = view }
+  Browser.element { init = init, update = updateWithStorage, subscriptions = subscriptions, view = view }
+
+
+updateWithStorage : Msg -> Model -> ( Model, Cmd Msg )
+updateWithStorage msg model =
+    let
+        ( newModel, cmds ) =
+            update msg model
+    in
+        ( newModel
+        , Cmd.batch [ setStorage newModel, cmds ]
+        )
+
+
+---- PORT ----
+
+
+port setStorage : Model -> Cmd msg
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.none
 
 
 
@@ -18,18 +46,18 @@ main =
 
 
 type alias Model =
-  { items : List TodoItem
-  , uid: Int
-  , newTodoContent: String
-  , errorVisibility: Bool
-  }
+    { items : List TodoItem
+    , uid: Int
+    , newTodoContent: String
+    , errorVisibility: Bool
+    }
 
 
 type alias TodoItem = 
-  { id : Int
-  , content : String
-  , completed : Bool
-  }
+    { id : Int
+    , content : String
+    , completed : Bool
+    }
 
 
 newItem : String -> Int -> TodoItem
@@ -40,9 +68,9 @@ newItem desc id =
     }
 
 
-init : Model
-init =
-  Model [] 0 "" False
+init : Maybe Model -> ( Model, Cmd Msg )
+init model = 
+    ( Maybe.withDefault (Model [] 0 "" False) model, Cmd.none )
 
 
 
@@ -50,26 +78,29 @@ init =
 
 
 type Msg
-  = UpdateNewTodo String
-  | Add
-  | Modify Int String
-  | Delete Int
-  | Complete Int Bool
+    = UpdateNewTodo String
+    | Add
+    | Modify Int String
+    | Delete Int
+    | Complete Int Bool
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
     Add ->
-        if model.newTodoContent /= "" then
-            { model | items =
-                model.items ++ [ newItem model.newTodoContent model.uid ]
-            , uid = model.uid + 1
-            , newTodoContent = ""
-            , errorVisibility = False 
-            }
-        else
-            { model | errorVisibility = True }
+        (
+          if model.newTodoContent /= "" then
+              { model | items =
+                  model.items ++ [ newItem model.newTodoContent model.uid ]
+              , uid = model.uid + 1
+              , newTodoContent = ""
+              , errorVisibility = False 
+              }
+          else
+              { model | errorVisibility = True }
+        , Cmd.none
+        )
 
     Modify id content ->
         let
@@ -79,13 +110,19 @@ update msg model =
                 else
                     item
         in
-        { model | items = List.map updateEntry model.items }
+        ( { model | items = List.map updateEntry model.items }
+        , Cmd.none
+        )
 
     Delete id ->
-        { model | items = List.filter (\t -> t.id /= id) model.items }
+        ( { model | items = List.filter (\t -> t.id /= id) model.items }
+        , Cmd.none
+        )
 
     UpdateNewTodo text ->
-        { model | newTodoContent = text }
+        ( { model | newTodoContent = text }
+        , Cmd.none
+        )
         
     Complete id isCompleted ->
         let
@@ -95,7 +132,9 @@ update msg model =
                 else
                     item
         in
-        { model | items = List.map updateEntry model.items }
+        ( { model | items = List.map updateEntry model.items }
+        , Cmd.none
+        )
 
 
 
@@ -105,13 +144,13 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div []
-      [ div []
-        [ div
-          [] [ viewInput "text" "Add a new todo" model.newTodoContent UpdateNewTodo Add ]
-        , viewErrorMessage model.errorVisibility
-        , viewTodoItems model.items
+        [ div []
+            [ div
+                [] [ viewInput "text" "Add a new todo" model.newTodoContent UpdateNewTodo Add ]
+                , viewErrorMessage model.errorVisibility
+                , viewTodoItems model.items
+            ]
         ]
-      ]
 
 
 viewInput : String -> String -> String -> (String -> Msg) -> Msg -> Html Msg
@@ -156,10 +195,10 @@ viewCompleteCheckBox : TodoItem -> Html Msg
 viewCompleteCheckBox todo =
     div []
         [ input
-          [ type_ "checkbox"
-          , checked todo.completed
-          , onClick (Complete todo.id (not todo.completed))
-          ] []
+            [ type_ "checkbox"
+            , checked todo.completed
+            , onClick (Complete todo.id (not todo.completed))
+            ] []
         ]
 
 
