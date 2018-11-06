@@ -1,21 +1,8 @@
-/** Todo list */
-
 .app {
   position: relative;
-  width: 30%;
+  width: 600px;
   height: 100%;
   margin: 100px auto;
-}
-
-.app__card {
-  display: flex;
-  flex-direction: column;
-  min-height: 500px;
-  padding: 20px;
-  
-  border-radius: 4px;
-  background-color: rgb(174, 203, 250);
-  box-shadow: 0 1px 3px 0 rgba(60,64,67,0.30), 0 4px 8px 3px rgba(60,64,67,0.15);
 }
 
 .card__header {
@@ -31,9 +18,11 @@
 
 .card__header__inner {
   display: inline-flex;
+  width: 100%;
   padding: 8px 12px;
   
   align-items: center;
+  justify-content: space-between;
   letter-spacing: .0125em;
 }
 
@@ -104,4 +93,31 @@
 
 .list__item:hover .list__item__delete-btn {
   display: block;
+}
+
+/** Mobile **/
+
+@media only screen and (max-width: 600px) {
+  body {
+    margin: 0px;
+  }
+
+  .app {
+    width: 100%;
+    height: 100vh;
+    margin: 0;
+  }
+    
+  .card {
+    min-height: 100%;
+  }
+
+  .list {
+    height: 100%;
+    margin-top: 64px;
+  }
+
+  .card__header {
+    position: fixed;
+  }
 }

@@ -1,12 +1,14 @@
 port module Main exposing (..)
 
 import Browser
+import Browser.Dom exposing (focus, blur)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput, onClick, on, keyCode)
 import Json.Decode as JD
 import Svg as S
 import Svg.Attributes as SA
+import Task
 
 
 -- MAIN
@@ -49,8 +51,6 @@ subscriptions model =
 type alias Model =
     { items : List TodoItem
     , uid: Int
-    , newTodoContent: String
-    , errorVisibility: Bool
     }
 
 
@@ -61,17 +61,17 @@ type alias TodoItem =
     }
 
 
-newItem : String -> Int -> TodoItem
-newItem desc id =
+newItem : Int -> TodoItem
+newItem id =
     { id = id
-    , content = desc
+    , content = ""
     , completed = False
     }
 
 
 init : Maybe Model -> ( Model, Cmd Msg )
 init model = 
-    ( Maybe.withDefault (Model [] 0 "" False) model, Cmd.none )
+    ( Maybe.withDefault ( Model [] 0 ) model, Cmd.none )
 
 
 
@@ -79,28 +79,36 @@ init model =
 
 
 type Msg
-    = UpdateNewTodo String
+    = NoOp
     | Add
     | Modify Int String
     | Delete Int
     | Complete Int Bool
+    | Blur Int
+
+
+focusInput : Int -> Cmd Msg
+focusInput id =
+  Task.attempt (\_ -> NoOp) (focus ("item-" ++ String.fromInt id))
+
+
+blurInput : Int -> Cmd Msg
+blurInput id =
+  Task.attempt (\_ -> NoOp) (blur ("item-" ++ String.fromInt id))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
+    NoOp ->
+        ( model, Cmd.none )
+    
     Add ->
-        (
-          if model.newTodoContent /= "" then
-              { model | items =
-                  model.items ++ [ newItem model.newTodoContent model.uid ]
-              , uid = model.uid + 1
-              , newTodoContent = ""
-              , errorVisibility = False 
-              }
-          else
-              { model | errorVisibility = True }
-        , Cmd.none
+        ( { model | items =
+            model.items ++ [ newItem model.uid ]
+          , uid = model.uid + 1
+          }
+        , focusInput model.uid
         )
 
     Modify id content ->
@@ -119,11 +127,6 @@ update msg model =
         ( { model | items = List.filter (\t -> t.id /= id) model.items }
         , Cmd.none
         )
-
-    UpdateNewTodo text ->
-        ( { model | newTodoContent = text }
-        , Cmd.none
-        )
         
     Complete id isCompleted ->
         let
@@ -137,7 +140,8 @@ update msg model =
         , Cmd.none
         )
 
-
+    Blur id ->
+        ( model , blurInput id )
 
 -- VIEW
 
@@ -145,7 +149,7 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div [ class "app" ]
-        [ div [ class "mdc-card" ]
+        [ div [ class "mdc-card card" ]
             [ div
                 [ class "card__header" ]
                 [ div
@@ -153,26 +157,15 @@ view model =
                     [ span
                         [ class "card__header__title" ]
                         [ text "Todo List" ]
+                    , button
+                        [ class "mdc-icon-button material-icons"
+                        , onClick Add
+                        ] [ text "add" ]
                     ]
-                ]  
-            , div
-                [ class "new-todo" ] [ viewInput "text" "Add a new todo" model.newTodoContent UpdateNewTodo Add ]
-                , viewErrorMessage model.errorVisibility
-                , viewTodoItems model.items
+                ]
+            , viewTodoItems model.items
             ]
         ]
-
-
-viewInput : String -> String -> String -> (String -> Msg) -> Msg -> Html Msg
-viewInput t p v inputMsg enterMsg =
-    input [ class "mdc-text-field__input"
-          , type_ t
-          , placeholder p
-          , value v
-          , autofocus True
-          , onInput inputMsg
-          , onEnter enterMsg
-          ] []
 
 
 onEnter : Msg -> Attribute Msg
@@ -199,9 +192,16 @@ viewTodoItem todo =
         [ viewCompleteCheckBox todo
         , div
             [ class "mdc-list-item__text list__item__input" ]
-            [ textarea 
-                [ class "list__item__input__text-area", classList [ ( "completed", todo.completed ) ], rows 1 ]
-                [ text todo.content ]
+            [ input 
+                [ id ("item-" ++ String.fromInt todo.id)
+                , class "list__item__input__text-area"
+                , classList [ ( "completed", todo.completed ) ]
+                , rows 1
+                , value todo.content
+                , onInput (Modify todo.id)
+                , onEnter (Blur todo.id)
+                ]
+                []
             ]
         , viewDeleteButton todo.id
         ]
